@@ -18,6 +18,9 @@ catch (IOException)
 Console.Out.NewLine = "\n";
 Console.Error.NewLine = "\n";
 
+// The exe that redmine update moved aside last time.
+Updater.CleanUpOld();
+
 try
 {
     return await Cli.RunAsync(args);

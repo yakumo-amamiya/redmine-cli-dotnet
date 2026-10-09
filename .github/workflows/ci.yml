@@ -26,6 +26,22 @@ jobs:
           dotnet test --no-build -c Release
           ./out/win-x64/redmine.exe --version
           "size: {0:N1} MB" -f ((Get-Item ./out/win-x64/redmine.exe).Length / 1MB)
+      - name: redmine update (from the real Releases, into a temp folder)
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'redmine-update'
+          New-Item -ItemType Directory $dir | Out-Null
+          Copy-Item out/win-x64/redmine.exe $dir
+          $exe = Join-Path $dir 'redmine.exe'
+          Set-Content "$exe.old" 'left by the last update'
+          & $exe --version
+          if (Test-Path "$exe.old") { throw 'redmine.exe.old was not deleted at the start' }
+          & $exe update --check
+          # Going back to a released version exercises the download, the hash, the check of the new exe and the swap.
+          & $exe update --to 0.2.0
+          if ($LASTEXITCODE -ne 0) { throw 'redmine update failed' }
+          $printed = & $exe --version
+          if ($printed -ne '0.2.0') { throw "after the update, redmine --version printed $printed" }
       - name: install script (Windows PowerShell 5.1)
         shell: powershell
         run: |

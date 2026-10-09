@@ -106,6 +106,7 @@ internal static class Cli
 
         AI エージェント向けの手順書: redmine guide
         各コマンドの詳細        : redmine <command> --help   (例: redmine issues create --help)
+        redmine 自身の更新      : redmine update   (確かめるだけなら redmine update --check)
         """;
 
     // No response files: a comment like "@someone 確認お願いします" must stay text, not be read as a file.
@@ -134,6 +135,7 @@ internal static class Cli
         root.Subcommands.Add(TimeCommand.Create());
         root.Subcommands.Add(ApiCommand.Create());
         root.Subcommands.Add(GuideCommand.Create());
+        root.Subcommands.Add(UpdateCommand.Create());
         root.Subcommands.Add(CreateHelp(root));
         root.WithNotes(RootNotes);
         HelpNotes.Install(root);

@@ -38,7 +38,9 @@ irm https://raw.githubusercontent.com/yakumo-amamiya/redmine-cli-dotnet/main/ins
 2. `%LOCALAPPDATA%\Programs\redmine-cli\redmine.exe` に置く
 3. そのフォルダをユーザーの PATH に足す (初回だけ。新しく開いたシェルから `redmine` で使える)
 
-更新するときは同じ 1 行をもう一度実行する。版を指定するとき、外すときは次のようにする。
+更新するときは `redmine update` を実行する (確かめるだけなら `redmine update --check`)。Release から新しい exe を落として
+SHA256SUMS と照合し、動くことを確かめてから今の exe と置き換える。v0.2.0 以前の版には update が無いので、同じ 1 行をもう一度実行して入れ直す。
+install.ps1 で版を指定するとき、外すときは次のようにする。
 
 ```powershell
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/yakumo-amamiya/redmine-cli-dotnet/main/install.ps1))) -Version 0.1.0
@@ -279,6 +281,7 @@ CLI 側でできるのはここまでで、`.redmine.json` と環境変数の両
 | | Node 版 (redmine-cli) | この版 |
 | --- | --- | --- |
 | 入れ方 | clone して `npm install` と `npm link` | `irm ... \| iex` (exe 1 つ。Node も .NET も要らない) |
+| 更新 | `git pull` | `redmine update` (Release から落として照合し、exe を置き換える) |
 | 自分のキーと証明書の設定 | `setx` を手で | `redmine setup` で対話 (キーとパスワードは画面に出さず、証明書はその場で開けるか確かめる) |
 | 社内 CA | `NODE_EXTRA_CA_CERTS` | Windows の証明書ストア。ストアに無い CA は `REDMINE_EXTRA_CA_CERTS` (`NODE_EXTRA_CA_CERTS` も読む) |
 | プロキシ | 環境変数だけ。NTLM / Kerberos は px や cntlm が必要 | 環境変数、無ければ Windows の設定。NTLM / Kerberos はサインイン中のユーザーで応答 |
@@ -307,6 +310,7 @@ src/RedmineCli/
   Config.cs             .redmine.json の探索と検証、REDMINE_API_KEY_<識別子> などの変数名と読み取り
   RedmineClient.cs      HTTP。プロキシ、リダイレクト、エラーの日本語化、アップロード、ダウンロード
   Tls.cs                クライアント証明書 (PFX / PEM) の読み込み、REDMINE_EXTRA_CA_CERTS
+  Updater.cs            redmine update (最新版の確認、ダウンロードと照合、exe の入れ替え)
   Context.cs            安全装置。対象プロジェクトの解決、所属検証、送信前確認
   Lookups.cs            名前 → id の解決 (トラッカー、ステータス、担当者、カスタムフィールドなど)
   Output.cs, Json.cs    テーブル整形、JSON の出力、stdout / stderr の使い分け

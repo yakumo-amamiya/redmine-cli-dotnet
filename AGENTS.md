@@ -17,4 +17,7 @@ Redmine の REST API を叩く CLI (`redmine.exe`)。Node 版 [redmine-cli](http
   (`REDMINE_TEST_EXE` を指すと別の exe に同じテストを流せる)
 - コードのコメントと XML doc は英語、利用者に見せる文言とドキュメントは日本語
 - `install.ps1` は Windows PowerShell 5.1 でも動く書き方にする (`??`・三項演算子・`&&` を使わない)。`irm | iex` で呼び出し元のシェルで動くので `exit` を使わない
+- `redmine update` は動いている exe を `.old` に退けて新しい exe と入れ替える。入れ替えた後は、まだ読み込んでいないコードを動かさない
+  (exe のファイルがもうその場所に無い。結果の文字列は入れ替える前に作る)。テストは `REDMINE_CLI_RELEASES_URL` でモックの Release を指し、
+  本物の exe は置き換えない。CI は AOT の exe を一時フォルダに置いて、本物の Release から `--to 0.2.0` で入れ替えを試す
 - リリースは `v*` のタグ (README の「開発」)。Node 版のリポジトリは参照するだけで変更しない

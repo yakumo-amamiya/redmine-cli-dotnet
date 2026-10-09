@@ -378,32 +378,13 @@ internal sealed partial class RedmineClient : IDisposable
         {
             return true;
         }
-        if (errors == SslPolicyErrors.RemoteCertificateChainErrors && certificate is not null && _extraRoots.Count > 0
-            && ChainsToExtraRoot(certificate, chain))
+        if (ExtraRoots.Accept(_extraRoots, certificate, chain, errors))
         {
             return true;
         }
         _serverNameMismatchOnly = errors == SslPolicyErrors.RemoteCertificateNameMismatch;
         _serverCertificateProblem = DescribeCertificateProblem(errors, chain);
         return false;
-    }
-
-    private bool ChainsToExtraRoot(X509Certificate certificate, X509Chain? presented)
-    {
-        var leaf = certificate as X509Certificate2 ?? X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
-        using var chain = new X509Chain();
-        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-        chain.ChainPolicy.CustomTrustStore.AddRange(_extraRoots);
-        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        chain.ChainPolicy.ApplicationPolicy.Add(new Oid("1.3.6.1.5.5.7.3.1"));
-        if (presented is not null)
-        {
-            foreach (var element in presented.ChainElements)
-            {
-                chain.ChainPolicy.ExtraStore.Add(element.Certificate);
-            }
-        }
-        return chain.Build(leaf);
     }
 
     private static string DescribeCertificateProblem(SslPolicyErrors errors, X509Chain? chain)

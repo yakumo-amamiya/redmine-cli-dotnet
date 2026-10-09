@@ -176,6 +176,7 @@ function Invoke-RedmineInstaller {
         }
     }
     Write-Host '次は新しいシェルを開き、対象のリポジトリで redmine setup を実行してください (.redmine.json がまだ無いなら redmine init。使い方: redmine --help)。'
+    Write-Host '今後の更新は redmine update でできます。'
 }
 
 Invoke-RedmineInstaller -Version $Version -InstallDir $InstallDir -Uninstall $Uninstall.IsPresent -NoPathUpdate $NoPathUpdate.IsPresent -ArchivePath $ArchivePath

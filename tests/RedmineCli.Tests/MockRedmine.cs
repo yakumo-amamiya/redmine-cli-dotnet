@@ -25,7 +25,8 @@ public sealed record RecordedRequest(
     string? ClientCertificateSubject);
 
 /// <summary>What a route answers: JSON, or a body with headers.</summary>
-public sealed record MockResponse(int Status = 200, JsonNode? Json = null, string? Body = null, IReadOnlyDictionary<string, string>? Headers = null);
+public sealed record MockResponse(
+    int Status = 200, JsonNode? Json = null, string? Body = null, IReadOnlyDictionary<string, string>? Headers = null, byte[]? Bytes = null);
 
 /// <summary>
 /// The smallest Redmine stand-in: routes keyed by "METHOD /path", and every request recorded.
@@ -140,6 +141,10 @@ public sealed class MockRedmine : IAsyncDisposable
         if (result.Body is not null)
         {
             await context.Response.WriteAsync(result.Body);
+        }
+        if (result.Bytes is not null)
+        {
+            await context.Response.Body.WriteAsync(result.Bytes);
         }
     }
 

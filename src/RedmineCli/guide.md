@@ -20,6 +20,7 @@
 - 環境変数 `REDMINE_API_KEY_*`、`REDMINE_CLIENT_CERT_*`、`REDMINE_CLIENT_KEY_*`、`REDMINE_CLIENT_CERT_PASSWORD_*` を表示・設定・変更しない。証明書ファイルの中身も読まない。
   これらは CLI のプロセスが自分で読む。AI が値を知る必要はない。
 - `redmine setup` を実行しない。人が端末で API キーや証明書を入れるためのコマンドで、非対話の実行は終了コード 4 で断られる。
+- `redmine update` (CLI 自身の更新) は、ユーザーに頼まれたときだけ実行する。`--check` で確かめるのは自由。
 - `api` コマンドの `--unsafe` を、`issues` / `time` サブコマンドで代替できる操作に使わない。`api` は宛先プロジェクトを検証できません。
 - `--yes` を付ける前に、`--dry-run` の出力または `issues show` で対象が正しいことを確認する。
 - 説明やコメントの長文は `--description-file` / `--note-file` (`-` で stdin) で渡す。シェルのクォート事故を避けるため。

@@ -1,3 +1,4 @@
+using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -257,6 +258,36 @@ internal static class ExtraRoots
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Whether a server certificate is acceptable: Windows' own check passed, or its only problem is the chain and the chain
+    /// ends at one of the extra roots. A wrong host name is never accepted.
+    /// </summary>
+    public static bool Accept(X509Certificate2Collection roots, X509Certificate? certificate, X509Chain? presented, SslPolicyErrors errors)
+    {
+        if (errors == SslPolicyErrors.None)
+        {
+            return true;
+        }
+        if (errors != SslPolicyErrors.RemoteCertificateChainErrors || certificate is null || roots.Count == 0)
+        {
+            return false;
+        }
+        var leaf = certificate as X509Certificate2 ?? X509CertificateLoader.LoadCertificate(certificate.GetRawCertData());
+        using var chain = new X509Chain();
+        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+        chain.ChainPolicy.CustomTrustStore.AddRange(roots);
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        chain.ChainPolicy.ApplicationPolicy.Add(new Oid("1.3.6.1.5.5.7.3.1"));
+        if (presented is not null)
+        {
+            foreach (var element in presented.ChainElements)
+            {
+                chain.ChainPolicy.ExtraStore.Add(element.Certificate);
+            }
+        }
+        return chain.Build(leaf);
     }
 
     public static X509Certificate2Collection Load(Func<string, string?>? getEnv = null)
