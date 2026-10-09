@@ -1,0 +1,47 @@
+name: Release
+
+# Pushing a v* tag (v0.1.0) publishes the Native AOT exe for Windows x64 and attaches it to a GitHub Release:
+#   redmine-win-x64.zip  the exe (install.ps1 downloads this)
+#   SHA256SUMS           its hash (install.ps1 checks it)
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: version from the tag
+        shell: pwsh
+        run: '"VERSION=$($env:GITHUB_REF_NAME.TrimStart(''v''))" >> $env:GITHUB_ENV'
+      - run: dotnet build -c Release
+      - run: dotnet test --no-build -c Release
+      - name: publish (Native AOT)
+        run: dotnet publish src/RedmineCli -c Release -r win-x64 -p:Version=${{ env.VERSION }} -o out/win-x64
+      - name: test the published exe
+        shell: pwsh
+        run: |
+          $env:REDMINE_TEST_EXE = "$PWD/out/win-x64/redmine.exe"
+          dotnet test --no-build -c Release
+          $printed = ./out/win-x64/redmine.exe --version
+          if ($printed -ne $env:VERSION) { throw "redmine --version printed '$printed', the tag says '$env:VERSION'" }
+      - name: package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist | Out-Null
+          Compress-Archive -Path out/win-x64/redmine.exe -DestinationPath dist/redmine-win-x64.zip
+          $lines = Get-ChildItem dist | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name }
+          [IO.File]::WriteAllText("$PWD/dist/SHA256SUMS", ($lines -join "`n") + "`n")
+          Get-Content dist/SHA256SUMS
+      - name: create the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create $env:GITHUB_REF_NAME dist/redmine-win-x64.zip dist/SHA256SUMS --title $env:GITHUB_REF_NAME --generate-notes

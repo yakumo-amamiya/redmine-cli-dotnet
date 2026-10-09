@@ -1,0 +1,19 @@
+<Project>
+  <!-- Settings shared by every project. Do not override them in a single csproj. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- The release workflow sets the version from the tag (dotnet publish -p:Version=0.2.0). -->
+    <Version>0.1.0</Version>
+    <!-- The version option prints the version only, without the commit hash the SDK appends by default. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Authors>yakumo-amamiya</Authors>
+    <RepositoryUrl>https://github.com/yakumo-amamiya/redmine-cli-dotnet</RepositoryUrl>
+  </PropertyGroup>
+</Project>

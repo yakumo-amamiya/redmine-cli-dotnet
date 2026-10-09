@@ -1,0 +1,9 @@
+bin/
+obj/
+out/
+dist/
+.vs/
+*.user
+TestResults/
+# This repository has no write target of its own (init is run in the target repository)
+/.redmine.json

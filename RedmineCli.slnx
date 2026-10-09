@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RedmineCli/RedmineCli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RedmineCli.Tests/RedmineCli.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,45 @@
+name: CI
+
+# Builds and tests, publishes the Native AOT exe and runs the same tests against it, and tries install.ps1 on
+# Windows PowerShell 5.1 (the shell most users run `irm ... | iex` in).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet build -c Release
+      - run: dotnet test --no-build -c Release --logger "console;verbosity=normal"
+      - name: publish (Native AOT)
+        run: dotnet publish src/RedmineCli -c Release -r win-x64 -o out/win-x64
+      - name: test the published exe
+        shell: pwsh
+        run: |
+          $env:REDMINE_TEST_EXE = "$PWD/out/win-x64/redmine.exe"
+          dotnet test --no-build -c Release
+          ./out/win-x64/redmine.exe --version
+          "size: {0:N1} MB" -f ((Get-Item ./out/win-x64/redmine.exe).Length / 1MB)
+      - name: install script (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          Compress-Archive -Path out/win-x64/redmine.exe -DestinationPath out/redmine-win-x64.zip -Force
+          # As `irm | iex` does: the text decoded as UTF-8, run as a script block.
+          $script = [scriptblock]::Create([IO.File]::ReadAllText("$PWD/install.ps1", [Text.Encoding]::UTF8))
+          $dir = Join-Path $env:RUNNER_TEMP 'redmine-install'
+          function UserPath { @((Get-ItemProperty HKCU:\Environment).Path -split ';') }
+          & $script -ArchivePath out/redmine-win-x64.zip -InstallDir $dir
+          if ((UserPath) -notcontains $dir) { throw 'the user PATH was not updated' }
+          & (Join-Path $dir 'redmine.exe') --version
+          # Installing again over an existing exe (an update).
+          & $script -ArchivePath out/redmine-win-x64.zip -InstallDir $dir
+          if (@(UserPath | Where-Object { $_ -eq $dir }).Count -ne 1) { throw 'the user PATH got the folder twice' }
+          & $script -Uninstall -InstallDir $dir
+          if (Test-Path (Join-Path $dir 'redmine.exe')) { throw 'redmine.exe was not removed' }
+          if ((UserPath) -contains $dir) { throw 'the user PATH still has the folder' }

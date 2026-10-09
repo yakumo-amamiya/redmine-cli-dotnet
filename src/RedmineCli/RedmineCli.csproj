@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>redmine</AssemblyName>
+    <RootNamespace>RedmineCli</RootNamespace>
+    <Description>Redmine REST API CLI. 書き込み先はリポジトリ直下の .redmine.json で固定し、トークンはプロジェクト専用の環境変数 REDMINE_API_KEY_&lt;識別子&gt; から読む。</Description>
+    <!-- Released as one native exe (no .NET runtime needed on the user's PC). The analyzers keep the code AOT-safe in every build. -->
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="guide.md" LogicalName="RedmineCli.guide.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RedmineCli.Tests" />
+  </ItemGroup>
+
+</Project>
