@@ -10,7 +10,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <!-- The release workflow sets the version from the tag (dotnet publish -p:Version=0.2.0). -->
-    <Version>0.3.1</Version>
+    <Version>0.4.0</Version>
     <!-- The version option prints the version only, without the commit hash the SDK appends by default. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Authors>yakumo-amamiya</Authors>

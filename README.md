@@ -216,6 +216,11 @@ redmine issues create --subject "ログイン画面の崩れ" --tracker Bug --as
 redmine issues create --subject "ログイン画面の崩れ" --tracker Bug --assignee me --yes
 redmine issues update 123 --status "進行中" --done 30 --note "着手" --yes
 redmine issues comment 123 "確認しました" --yes
+redmine issues update 456 --parent 123 --yes               # 456 を 123 の子チケットにする (--parent none で外す)
+redmine issues list --parent 123 --status all              # 123 の子チケット
+redmine issues relations 123                               # 関連チケット (相手の件名・ステータスつき)
+redmine issues relate 123 456 --type blocks --yes          # 123 が終わるまで 456 を終えられない
+redmine issues unrelate 123 456 --yes                      # 関連を外す
 redmine fields                                             # カスタムフィールドの名前・型・選択肢
 redmine issues update 123 --field "顧客=ACME" --field "対象OS=Windows" --field "対象OS=Linux" --yes
 redmine issues attach 123 .\screenshot.png --note "再現時の画面" --yes
@@ -254,7 +259,7 @@ redmine api GET "/issues.json?assigned_to_id=me&limit=5"
 | 層 | 内容 |
 | --- | --- |
 | 宛先の固定 | `.redmine.json` の `url` と `project` のみ。`--project` のような書き込み先指定は存在しない |
-| 所属の検証 | `issues update/comment/attach`、`time log`、`--parent` は対象チケットの所属プロジェクトを取得して照合する |
+| 所属の検証 | `issues update/comment/attach`、`time log`、`--parent` は対象チケットの所属プロジェクトを取得して照合する。`issues relate/unrelate` は両方のチケットを照合する |
 | 送信前の確認 | 宛先と内容を stderr に表示。`--yes` / 対話 y/N / `--dry-run` のいずれかを必ず通る |
 | 非対話の扱い | stdin が端末でなく `--yes` も無ければ送信せず終了コード 4 |
 | 生 API | `api` の GET 以外は `--unsafe` が必須。プロジェクトの検証はできないと明示している |
@@ -297,6 +302,7 @@ CLI 側でできるのはここまでで、`.redmine.json` と環境変数の両
 | 引数 | `--limit abc` などは既定値として扱う | 数でない値は引数誤り (終了コード 2) |
 | `api GET` のボディ | 送ろうとして失敗する | 引数誤りとして止める |
 | ヘルプ | | `redmine help <command>` でも出る |
+| 関連チケット | 見るだけ (`issues show`) | `issues relations` / `relate` / `unrelate`。子チケットの一覧は `issues list --parent` |
 
 ## 開発
 

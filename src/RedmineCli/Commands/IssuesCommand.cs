@@ -43,15 +43,21 @@ internal static class IssuesCommand
 
     public static Command Create()
     {
-        var issues = new Command("issues", "チケットの一覧・参照・作成・更新・コメント・添付").WithNotes("""
-            読み取り (どのプロジェクトでも可): list, show, files, download
-            書き込み (.redmine.json の project 内のみ): create, update, comment, attach
+        var issues = new Command("issues", "チケットの一覧・参照・作成・更新・コメント・添付・関連").WithNotes("""
+            読み取り (どのプロジェクトでも可): list, show, files, download, relations
+            書き込み (.redmine.json の project 内のみ): create, update, comment, attach, relate, unrelate
+
+            親子: 親は create / update の --parent <id> (none で外す)。子の一覧は list --parent <id>
+            関連: relations で一覧、relate で付ける、unrelate で外す
 
             例:
               redmine issues list --mine
               redmine issues show 123
               redmine issues create --subject "ログイン画面の崩れ" --tracker Bug --assignee me --yes
               redmine issues update 123 --status "進行中" --done 30 --note "着手" --yes
+              redmine issues update 456 --parent 123 --yes          # 456 を 123 の子にする
+              redmine issues list --parent 123 --status all         # 123 の子チケット
+              redmine issues relate 123 456 --type blocks --yes     # 123 が終わるまで 456 を終えられない
               redmine issues attach 123 ./screenshot.png --note "再現時の画面" --yes
               redmine issues download 123 --all --dir ./tmp
             """);
@@ -64,6 +70,10 @@ internal static class IssuesCommand
         issues.Subcommands.Add(CreateFiles());
         issues.Subcommands.Add(CreateAttach());
         issues.Subcommands.Add(CreateDownload());
+        foreach (var command in RelationsCommand.CreateAll())
+        {
+            issues.Subcommands.Add(command);
+        }
         return issues;
     }
 
@@ -422,8 +432,8 @@ internal static class IssuesCommand
         var relations = Items(issue.Get("relations"));
         if (relations.Count > 0)
         {
-            lines.Add($"--- 関連 ({relations.Count}) ---");
-            lines.AddRange(relations.Select(r => $"{r.Get("relation_type").Text()}: #{r.Get("issue_id").Text()} → #{r.Get("issue_to_id").Text()}"));
+            lines.Add($"--- 関連 ({relations.Count}。相手の件名は redmine issues relations {issue.Get("id").Text()}) ---");
+            lines.AddRange(relations.Select(r => RelationsCommand.Describe(issue.Get("id").Long() ?? 0, r)));
         }
         var attachments = Items(issue.Get("attachments"));
         if (attachments.Count > 0)
@@ -450,7 +460,7 @@ internal static class IssuesCommand
         return string.Join("\n", lines);
     }
 
-    private static async Task<bool> WarnIfOutsideAsync(Context ctx, JsonObject issue)
+    internal static async Task<bool> WarnIfOutsideAsync(Context ctx, JsonObject issue)
     {
         var target = await ctx.TargetProjectAsync();
         var inside = issue.Get("project").Get("id").Long() == target.Id;
@@ -474,6 +484,7 @@ internal static class IssuesCommand
         var priority = Text("--priority", "優先度名 | id", "priority");
         var queryId = Text("--query", "保存済みクエリ id (指定時は他の絞り込みは無視される)", "id");
         var search = Text("--search", "件名に含まれる文字列", "text");
+        var parent = Text("--parent", "親チケット id で絞る (その直下の子チケット)", "id");
         var field = Repeated("--field", "カスタムフィールドの値で絞り込む (完全一致。複数回指定可)", "name=value");
         var sort = new Option<string>("--sort")
         {
@@ -485,7 +496,7 @@ internal static class IssuesCommand
         var offset = new Option<int>("--offset") { Description = "開始位置 (ページング)", HelpName = "n", DefaultValueFactory = _ => 0 };
         var command = new Command("list", "チケット一覧。既定は対象プロジェクトの未完了チケット (更新日時の新しい順)")
         {
-            all, project, status, assignee, mine, tracker, priority, queryId, search, field, sort, limit, offset,
+            all, project, status, assignee, mine, tracker, priority, queryId, search, parent, field, sort, limit, offset,
         }.WithNotes("""
             出力 (--json): Redmine の応答そのまま
               { "issues": [ { "id", "subject", "project": {"id","name"}, "tracker", "status", "priority",
@@ -498,6 +509,7 @@ internal static class IssuesCommand
               redmine issues list --status all --limit 100
               redmine issues list --search "ログイン" --json
               redmine issues list --field "顧客=ACME"   # カスタムフィールドで絞り込む
+              redmine issues list --parent 123 --status all   # 123 の子チケット (完了したものも)
               redmine issues list --all --mine          # 全プロジェクトの自分担当
               redmine issues list --offset 25           # 次のページ
 
@@ -545,6 +557,10 @@ internal static class IssuesCommand
             if (parse.GetValue(search) is { Length: > 0 } searchText)
             {
                 query.Set("subject", $"~{searchText}");
+            }
+            if (parse.GetValue(parent) is { Length: > 0 } parentText)
+            {
+                query.Set("parent_id", Context.ParseId(parentText, "--parent"));
             }
             var fields = parse.GetValue(field) ?? [];
             if (fields.Length > 0)

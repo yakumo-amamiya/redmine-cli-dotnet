@@ -48,12 +48,17 @@ redmine me --json          # 接続確認。user と target.project (id, name, i
 | チケット一覧 | `redmine issues list [--mine] [--status open\|closed\|all\|<名前>] [--search <text>] [--limit N] [--offset N]` | 読み取り |
 | チケット詳細 | `redmine issues show <id> [--no-journals]` | 読み取り |
 | 添付一覧 | `redmine issues files <id>` | 読み取り |
+| 関連チケットの一覧 | `redmine issues relations <id>` | 読み取り |
+| 子チケットの一覧 | `redmine issues list --parent <id> [--status all]` | 読み取り |
 | 添付の保存 | `redmine issues download <id> [--all\|--name <f>\|--attachment <id>] [--dir <path>]` | 読み取り |
 | 作業時間一覧 | `redmine time list [--issue <id>] [--from <date>] [--to <date>] [--user me\|all]` | 読み取り |
 | 生 API (GET) | `redmine api GET /path.json?query` | 読み取り |
 | チケット作成 | `redmine issues create --subject <text> [...] --yes` | 書き込み |
 | チケット更新 | `redmine issues update <id> [--status ...] [--note ...] --yes` | 書き込み |
 | コメント | `redmine issues comment <id> "<text>" --yes` | 書き込み |
+| 親の設定・解除 | `redmine issues update <id> --parent <親 id\|none> --yes` | 書き込み |
+| 関連を付ける | `redmine issues relate <id> <相手> [--type blocks] [--delay N] --yes` | 書き込み (両方とも対象プロジェクト内) |
+| 関連を外す | `redmine issues unrelate <id> <相手> [--type blocks] --yes` | 書き込み (両方とも対象プロジェクト内) |
 | 添付 | `redmine issues attach <id> <file...> [--note ...] --yes` | 書き込み |
 | 作業時間の記録 | `redmine time log <id> --hours <h> [--comment ...] --yes` | 書き込み |
 | 生 API (書き込み) | `redmine api POST\|PUT\|DELETE /path.json --data '<json>' --unsafe --yes` | 書き込み (検証なし) |
@@ -90,7 +95,10 @@ redmine issues update 123 --status "進行中" --done 30 --note "着手しまし
 
 - `--tracker` `--status` `--priority` `--category` `--version` `--activity`: 名前でも id でもよい。名前は大文字小文字を区別せず、一意な部分一致も可。解決できないときは終了コード 2 と、選べる候補の一覧が stderr に出る。
 - `--assignee`: `me` / ユーザー id / メンバー名 / `none` (未割当)。
-- `--parent`: チケット id。対象プロジェクト内のチケットに限る。
+- `--parent`: チケット id。対象プロジェクト内のチケットに限る。`update` では `none` で親から外す。
+- `relate` / `unrelate` の `--type`: `<id>` から見た向きで書く。`relates` (既定)、`duplicates` / `duplicated`、`blocks` (`<id>` が終わるまで相手を終えられない) / `blocked`、
+  `precedes` / `follows` (`--delay` で間の日数)、`copied_to` / `copied_from`。`blocked-by` のように `-` で書いてもよい。
+  関連は両方のチケットの履歴に残るので、両方とも対象プロジェクト内でなければ終了コード 4。
 - `--field "名前=値"`: カスタムフィールド。`create` / `update` / `list` で使える。複数回指定可で、同じ名前を繰り返すと複数選択になる。`"名前="` でクリア。
   名前と選択肢は `redmine fields --json` で先に確認する。真偽は `yes` / `no`、リストは選択肢の表示名、ユーザー型は `me` / id / メンバー名、日付は `YYYY-MM-DD`。
   `show --json` では `issue.custom_fields[]` に `{ id, name, value }` で入る (複数選択は配列)。
@@ -108,6 +116,10 @@ redmine issues update 123 --status "進行中" --done 30 --note "着手しまし
 - `issues update/comment/attach --json`: 更新後の `{ "issue": {...} }`。
 - `issues download --json`: `{ "issue_id", "downloaded": [ { "id", "filename", "path", "filesize" } ] }`。
 - `time log --json`: `{ "time_entry": {...} }`。
+- `issues relations --json`: `{ "issue_id", "relations": [ { "id", "relation_type", "label", "other_issue_id", "delay", "other_issue": { "id", "subject", "tracker", "status", "project" }|null } ] }`。
+  `relation_type` は `issue_id` から見た向き (`issues show` の `relations` は Redmine が保存した向きのままなので、こちらを使う)。
+- `issues relate --json`: Redmine の応答 `{ "relation": { "id", "issue_id", "issue_to_id", "relation_type", "delay" } }`。
+- `issues unrelate --json`: `{ "deleted": { "id", "relation_type", "label", "issue_id", "other_issue_id" } }`。
 - `api`: サーバーの応答そのまま。ボディが無い成功は `{ "ok": true }`。
 - `--dry-run`: `{ "dry_run": true, "target": { "url", "project": { "id", "name", "identifier" } }, "request": { "method", "path", "body", "attachments"? } }`。
 

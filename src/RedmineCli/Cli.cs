@@ -79,8 +79,8 @@ internal static class Cli
           .redmine.json が無いリポジトリ  → redmine init で書き込み先を決める
           .redmine.json があるリポジトリ  → redmine setup で自分の API キーと証明書を環境変数に設定する
 
-        読み取り (どのプロジェクトも可): target, doctor, me, projects, fields, issues list/show/files/download, time list, api GET
-        書き込み (対象プロジェクトのみ): init, issues create/update/comment/attach, time log, api (GET 以外は --unsafe)
+        読み取り (どのプロジェクトも可): target, doctor, me, projects, fields, issues list/show/files/download/relations, time list, api GET
+        書き込み (対象プロジェクトのみ): init, issues create/update/comment/attach/relate/unrelate, time log, api (GET 以外は --unsafe)
 
         書き込みの流れ:
           1. --dry-run で送信内容 (JSON) を確認する
