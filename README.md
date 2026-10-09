@@ -292,6 +292,7 @@ src/RedmineCli/
   guide.md              AI 向け手順書 (redmine guide。exe に埋め込む)
   Commands/*.cs         各コマンド
 tests/RedmineCli.Tests/ テスト (Fixtures/tls はテスト専用の自己署名証明書)
+tests/install-check.ps1 install.ps1 の確認 (CI 用。ユーザーの PATH を書き換えるので手元では動かさない)
 install.ps1             インストーラー
 ```
 
