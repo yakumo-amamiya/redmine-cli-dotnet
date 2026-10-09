@@ -55,6 +55,24 @@ irm https://raw.githubusercontent.com/yakumo-amamiya/redmine-cli-dotnet/main/ins
 
 ## 初期設定
 
+### リポジトリに `.redmine.json` が既にあるとき (いちばん多い場合)
+
+誰かが `redmine init` 済みのリポジトリなら、そのリポジトリで次を実行するだけでよい。
+
+```powershell
+redmine setup
+```
+
+次の順に聞いて、このプロジェクト専用のユーザー環境変数に書き、最後に `redmine doctor` と同じ検査で接続を確かめる。
+
+1. API キー。Redmine の「個人設定」(`<url>/my/account`) の「APIアクセスキー」の値を貼り付ける。画面には出ない
+2. クライアント証明書。要る環境だけ答える。PFX か PEM のパスと、パスワード (パスフレーズ) を聞き、その場で証明書を開けるか確かめる
+
+書く前に内容を見せて確認する (`--dry-run` なら書かない)。値は新しく開いたシェルから使える。
+端末から実行したときだけ動き、AI エージェントなど非対話の実行は断る。
+
+手で設定するとき、`.redmine.json` を新しく作るときは、以下の手順。
+
 ### 1. API キーをプロジェクト専用の環境変数に置く
 
 Redmine の「個人設定」→「APIアクセスキー」→「表示」で得た値を、ユーザー環境変数に設定する。
@@ -74,6 +92,7 @@ setx REDMINE_API_KEY_MY_PROJECT "<キー>"
 ```
 
 設定後に新しいシェルを開く。CLI はこの値を表示しないし、引数でも受け取らない。
+`setx` の行はキーごと PowerShell の履歴に残ることがあるので、気になるなら `redmine setup` を使う。
 汎用の `REDMINE_API_KEY` は読まない。読むべき変数名は `redmine target` が表示する。
 
 `env` を付けずに識別子から変数名を決めておくと、`.redmine.json` の `project` が書き換わったときに対応する変数が無くなって止まる (ファイルと環境変数の二重鍵)。
@@ -161,6 +180,7 @@ redmine init --url https://redmine.example.co.jp --project my-project
 ### 4. 接続確認
 
 ```powershell
+redmine setup      # 自分の API キーと証明書を対話で設定し、接続まで確かめる
 redmine target     # ローカルの設定を表示 (ネットワーク不要)
 redmine doctor     # 設定 → 証明書の復号 → 経路 → 接続 → 認証 → プロジェクト、の順に検査して止まった段階を示す
 redmine me         # サーバーに接続し、ユーザーと対象プロジェクトを表示
@@ -259,6 +279,7 @@ CLI 側でできるのはここまでで、`.redmine.json` と環境変数の両
 | | Node 版 (redmine-cli) | この版 |
 | --- | --- | --- |
 | 入れ方 | clone して `npm install` と `npm link` | `irm ... \| iex` (exe 1 つ。Node も .NET も要らない) |
+| 自分のキーと証明書の設定 | `setx` を手で | `redmine setup` で対話 (キーとパスワードは画面に出さず、証明書はその場で開けるか確かめる) |
 | 社内 CA | `NODE_EXTRA_CA_CERTS` | Windows の証明書ストア。ストアに無い CA は `REDMINE_EXTRA_CA_CERTS` (`NODE_EXTRA_CA_CERTS` も読む) |
 | プロキシ | 環境変数だけ。NTLM / Kerberos は px や cntlm が必要 | 環境変数、無ければ Windows の設定。NTLM / Kerberos はサインイン中のユーザーで応答 |
 | リダイレクト | 飛ばされた先にも API キーのヘッダーが付く | 別のホストに飛ばされたらキーを送らない |
@@ -290,7 +311,7 @@ src/RedmineCli/
   Lookups.cs            名前 → id の解決 (トラッカー、ステータス、担当者、カスタムフィールドなど)
   Output.cs, Json.cs    テーブル整形、JSON の出力、stdout / stderr の使い分け
   guide.md              AI 向け手順書 (redmine guide。exe に埋め込む)
-  Commands/*.cs         各コマンド
+  Commands/*.cs         各コマンド (SetupCommand.cs は setup の対話)
 tests/RedmineCli.Tests/ テスト (Fixtures/tls はテスト専用の自己署名証明書)
 tests/install-check.ps1 install.ps1 の確認 (CI 用。ユーザーの PATH を書き換えるので手元では動かさない)
 install.ps1             インストーラー

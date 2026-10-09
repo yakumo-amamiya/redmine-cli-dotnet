@@ -429,7 +429,7 @@ internal sealed partial class RedmineClient : IDisposable
     {
         var env = _certEnv;
         var needCertHint =
-            $"サーバーがクライアント証明書を要求している可能性があります (mTLS)。証明書ファイルのパスを環境変数 {env.Cert} (PEM なら鍵を {env.Key}、PFX ならパスワードを {env.Password}) に設定してください。";
+            $"サーバーがクライアント証明書を要求している可能性があります (mTLS)。`redmine setup` を端末から実行して証明書を設定するか、証明書ファイルのパスを環境変数 {env.Cert} (PEM なら鍵を {env.Key}、PFX ならパスワードを {env.Password}) に設定してください。";
         var badCertHint =
             $"サーバーがクライアント証明書を拒否しました。証明書が正しいものか、有効期限が切れていないか、鍵とパスワード ({env.Password}) が合っているか確認してください。";
         var certHint = _clientCertificate is null ? needCertHint : badCertHint;

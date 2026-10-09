@@ -7,6 +7,8 @@ Redmine の REST API を叩く CLI (`redmine.exe`)。Node 版 [redmine-cli](http
 - 動かす: `dotnet run --project src/RedmineCli -- <サブコマンド>`。本物の Redmine に書き込まないよう、確認は `--dry-run` か、テストのモックで行う
 - 安全装置 (書き込み先は `.redmine.json` だけ、id 指定の書き込みは所属を確かめる、送信前の確認、API キーは
   プロジェクト専用の環境変数だけ) は弱めない。書き込み系のコマンドを足すときは `Context.ConfirmWriteAsync` と所属の検証を必ず通す
+- `redmine setup` はキーを受け取る唯一の場面。端末からの実行に限り (非対話は終了コード 4)、キーとパスワードは画面・ログに出さない。
+  受け取った値はプロジェクト専用のユーザー環境変数に書くだけで、CLI がキーを読むのは環境変数からのまま。引数でキーを渡す手段は作らない
 - コマンド、`.redmine.json`、環境変数、終了コード、`--json` の形は Node 版と同じに保つ。変えるときは README の「Node 版との違い」に書く
 - 終了コードの表は `Errors.cs`、`Cli.cs` (ルートのヘルプ)、`guide.md`、`README.md` にある。変えたら全部直す
 - exe は Native AOT: JSON は `JsonNode` で扱い、リフレクションの直列化 (`JsonSerializer.Serialize<T>` など) は使わない。

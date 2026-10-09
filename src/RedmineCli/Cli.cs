@@ -75,6 +75,10 @@ internal static class Cli
           別プロジェクトへ書く手段は無い。別プロジェクトは別のリポジトリ (別の .redmine.json) で扱う。
           作業前に `redmine target` で向き先を確認する。
 
+        最初の設定 (人が端末で):
+          .redmine.json が無いリポジトリ  → redmine init で書き込み先を決める
+          .redmine.json があるリポジトリ  → redmine setup で自分の API キーと証明書を環境変数に設定する
+
         読み取り (どのプロジェクトも可): target, doctor, me, projects, fields, issues list/show/files/download, time list, api GET
         書き込み (対象プロジェクトのみ): init, issues create/update/comment/attach, time log, api (GET 以外は --unsafe)
 
@@ -86,7 +90,8 @@ internal static class Cli
           REDMINE_API_KEY_<接尾辞>  API アクセスキー (必須。引数では渡せず、出力にも出ない)。
                                    接尾辞は .redmine.json の env (無ければ project) を大文字にし - を _ にしたもの
                                    (例: env "hosyu" → REDMINE_API_KEY_HOSYU、project my-project → REDMINE_API_KEY_MY_PROJECT)。
-                                   汎用の REDMINE_API_KEY は読まない。名前は `redmine target` で表示する
+                                   汎用の REDMINE_API_KEY は読まない。名前は `redmine target` で表示する。
+                                   `redmine setup` で対話で設定できる (証明書の 3 つも)
           REDMINE_CLIENT_CERT_<識別子>           クライアント証明書のパス (mTLS が必要な環境のみ)。.pfx/.p12 か PEM
           REDMINE_CLIENT_KEY_<識別子>            PEM の秘密鍵のパス (証明書ファイルに鍵が含まれていれば不要)
           REDMINE_CLIENT_CERT_PASSWORD_<識別子>  PFX や暗号化鍵のパスワード (任意)
@@ -122,6 +127,7 @@ internal static class Cli
         root.Subcommands.Add(TargetCommand.CreateMe());
         root.Subcommands.Add(DoctorCommand.Create());
         root.Subcommands.Add(InitCommand.Create());
+        root.Subcommands.Add(SetupCommand.Create());
         root.Subcommands.Add(ProjectsCommand.Create());
         root.Subcommands.Add(FieldsCommand.Create());
         root.Subcommands.Add(IssuesCommand.Create());

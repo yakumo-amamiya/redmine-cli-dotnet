@@ -13,7 +13,7 @@ internal static class DoctorCommand
     private const string Ng = "NG";
     private const string Skip = "--";
 
-    private sealed record Step(string Name, string Status, string Detail, string? Hint);
+    internal sealed record Step(string Name, string Status, string Detail, string? Hint);
 
     public static Command Create()
     {
@@ -40,54 +40,7 @@ internal static class DoctorCommand
         command.SetAction(async (parse, cancellation) =>
         {
             var g = GlobalOptions.Of(parse);
-            var steps = new List<Step>();
-            RedmineConfig? config = null;
-            try
-            {
-                config = ConfigFile.Load();
-                steps.Add(new Step(".redmine.json", Ok,
-                    $"{config.File} → {config.Url} / {config.Project}{(config.Env is not null ? $" (環境変数の接尾辞: {config.Env})" : "")}", null));
-            }
-            catch (CliException e)
-            {
-                steps.Add(new Step(".redmine.json", Ng, e.Message, e.Hint));
-            }
-            string? apiKey = null;
-            var certificate = (Ok: true, Value: (ClientCertificate?)null);
-            if (config is not null)
-            {
-                try
-                {
-                    apiKey = EnvNames.GetApiKey(config.Project, config.Env);
-                    steps.Add(new Step("API キー", Ok, $"環境変数 {EnvNames.ApiKey(config)} は設定済み", null));
-                }
-                catch (CliException e)
-                {
-                    steps.Add(new Step("API キー", Ng, e.Message, e.Hint));
-                }
-                certificate = CheckCertificate(config, steps);
-                steps.Add(new Step("経路", Ok, RedmineClient.DescribeRoute(new Uri(config.Url + "/")), null));
-            }
-            try
-            {
-                if (!parse.GetValue(offline))
-                {
-                    if (config is not null && apiKey is not null && certificate.Ok)
-                    {
-                        await CheckConnectionAsync(config, apiKey, certificate.Value, steps, cancellation);
-                        certificate.Value = null; // the client disposed it
-                    }
-                    else
-                    {
-                        steps.Add(new Step("接続と認証", Skip, "前の段階が NG のため省略", null));
-                    }
-                }
-            }
-            finally
-            {
-                certificate.Value?.Dispose();
-            }
-            var ok = steps.All(s => s.Status != Ng);
+            var (ok, steps) = await RunChecksAsync(parse.GetValue(offline), Environment.GetEnvironmentVariable, cancellation);
             if (g.Json)
             {
                 PrintJson(new JsonObject
@@ -104,29 +57,87 @@ internal static class DoctorCommand
             }
             else
             {
-                foreach (var s in steps)
-                {
-                    Out($"{s.Status} {s.Name}: {s.Detail}");
-                    if (s.Hint is not null)
-                    {
-                        Out($"      → {s.Hint}");
-                    }
-                }
-                Out(ok ? "すべて OK です" : "最初の NG が原因です。その行のヒントを見てください");
+                Print(steps, ok, Out);
             }
             return ok ? Exit.Ok : Exit.Error;
         });
         return command;
     }
 
+    public static void Print(IEnumerable<Step> steps, bool ok, Action<string> write)
+    {
+        foreach (var s in steps)
+        {
+            write($"{s.Status} {s.Name}: {s.Detail}");
+            if (s.Hint is not null)
+            {
+                write($"      → {s.Hint}");
+            }
+        }
+        write(ok ? "すべて OK です" : "最初の NG が原因です。その行のヒントを見てください");
+    }
+
+    /// <summary>All the checks, reading the variables through getEnv (setup checks the values it is about to write).</summary>
+    public static async Task<(bool Ok, List<Step> Steps)> RunChecksAsync(bool offline, Func<string, string?> getEnv, CancellationToken cancellation)
+    {
+        var steps = new List<Step>();
+        RedmineConfig? config = null;
+        try
+        {
+            config = ConfigFile.Load();
+            steps.Add(new Step(".redmine.json", Ok,
+                $"{config.File} → {config.Url} / {config.Project}{(config.Env is not null ? $" (環境変数の接尾辞: {config.Env})" : "")}", null));
+        }
+        catch (CliException e)
+        {
+            steps.Add(new Step(".redmine.json", Ng, e.Message, e.Hint));
+        }
+        string? apiKey = null;
+        var certificate = (Ok: true, Value: (ClientCertificate?)null);
+        if (config is not null)
+        {
+            try
+            {
+                apiKey = EnvNames.GetApiKey(config.Project, config.Env, getEnv, config.Url);
+                steps.Add(new Step("API キー", Ok, $"環境変数 {EnvNames.ApiKey(config)} は設定済み", null));
+            }
+            catch (CliException e)
+            {
+                steps.Add(new Step("API キー", Ng, e.Message, e.Hint));
+            }
+            certificate = CheckCertificate(config, steps, getEnv);
+            steps.Add(new Step("経路", Ok, RedmineClient.DescribeRoute(new Uri(config.Url + "/")), null));
+        }
+        try
+        {
+            if (!offline)
+            {
+                if (config is not null && apiKey is not null && certificate.Ok)
+                {
+                    await CheckConnectionAsync(config, apiKey, certificate.Value, steps, getEnv, cancellation);
+                    certificate.Value = null; // the client disposed it
+                }
+                else
+                {
+                    steps.Add(new Step("接続と認証", Skip, "前の段階が NG のため省略", null));
+                }
+            }
+        }
+        finally
+        {
+            certificate.Value?.Dispose();
+        }
+        return (steps.All(s => s.Status != Ng), steps);
+    }
+
     /// <summary>Reads and decodes the certificate locally (no network).</summary>
-    private static (bool Ok, ClientCertificate? Value) CheckCertificate(RedmineConfig config, List<Step> steps)
+    private static (bool Ok, ClientCertificate? Value) CheckCertificate(RedmineConfig config, List<Step> steps, Func<string, string?> getEnv)
     {
         var names = EnvNames.ClientCert(config);
         ClientCertFiles? files;
         try
         {
-            files = ClientCertificates.Read(names);
+            files = ClientCertificates.Read(names, getEnv);
         }
         catch (CliException e)
         {
@@ -135,7 +146,7 @@ internal static class DoctorCommand
         }
         if (files is null)
         {
-            steps.Add(new Step("証明書", Skip, $"未設定 (mTLS が必要なら {names.Cert})", null));
+            steps.Add(new Step("証明書", Skip, $"未設定 (mTLS が必要なら `redmine setup` で設定する。変数は {names.Cert} など)", null));
             return (true, null);
         }
         steps.Add(new Step("証明書ファイル", Ok,
@@ -151,12 +162,8 @@ internal static class DoctorCommand
             return (false, null);
         }
         steps.Add(new Step("証明書の読み込み", Ok, files.Password is not null ? "パスフレーズで復号できました" : "パスフレーズなしで読めました", null));
-        var x = certificate.Certificate;
-        var expired = x.NotAfter.ToUniversalTime() < DateTime.UtcNow;
-        var validTo = x.NotAfter.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
-        steps.Add(new Step("証明書の内容", expired ? Ng : Ok,
-            $"subject={x.Subject} / issuer={x.Issuer} / 有効期限 {validTo}{(expired ? " (期限切れ)" : "")}",
-            expired ? "IT 部門に証明書の再発行を依頼してください。" : null));
+        var content = DescribeCertificate(certificate.Certificate, out var expired);
+        steps.Add(new Step("証明書の内容", expired ? Ng : Ok, content, expired ? "IT 部門に証明書の再発行を依頼してください。" : null));
         if (expired)
         {
             certificate.Dispose();
@@ -165,13 +172,22 @@ internal static class DoctorCommand
         return (true, certificate);
     }
 
+    /// <summary>"subject=... / issuer=... / 有効期限 ..." for a certificate.</summary>
+    public static string DescribeCertificate(X509Certificate2 x, out bool expired)
+    {
+        expired = x.NotAfter.ToUniversalTime() < DateTime.UtcNow;
+        var validTo = x.NotAfter.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+        return $"subject={x.Subject} / issuer={x.Issuer} / 有効期限 {validTo}{(expired ? " (期限切れ)" : "")}";
+    }
+
     /// <summary>Connects for real and tells which stage stops it.</summary>
-    private static async Task CheckConnectionAsync(RedmineConfig config, string apiKey, ClientCertificate? certificate, List<Step> steps, CancellationToken cancellation)
+    private static async Task CheckConnectionAsync(
+        RedmineConfig config, string apiKey, ClientCertificate? certificate, List<Step> steps, Func<string, string?> getEnv, CancellationToken cancellation)
     {
         X509Certificate2Collection extraRoots;
         try
         {
-            extraRoots = ExtraRoots.Load();
+            extraRoots = ExtraRoots.Load(getEnv);
         }
         catch (CliException e)
         {

@@ -186,18 +186,24 @@ internal static partial class EnvNames
 
     public static ClientCertEnvNames ClientCert(RedmineConfig config) => ClientCert(config.Project, config.Env);
 
-    /// <summary>The API key, from the project's own variable only. Its value is never printed. Exit code 3 when it is not set.</summary>
-    public static string GetApiKey(string project, string? env, Func<string, string?>? getEnv = null)
+    /// <summary>
+    /// The API key, from the project's own variable only. Its value is never printed. Exit code 3 when it is not set.
+    /// With url (a .redmine.json exists), the hint points at redmine setup and at the page that shows the key.
+    /// </summary>
+    public static string GetApiKey(string project, string? env, Func<string, string?>? getEnv = null, string? url = null)
     {
         getEnv ??= Environment.GetEnvironmentVariable;
         var name = ApiKey(project, env);
         var key = getEnv(name);
         if (string.IsNullOrWhiteSpace(key))
         {
+            var manual = $"PowerShell: setx {name} \"<キー>\" のあと新しいシェルを開く";
             throw new CliException(
                 $"環境変数 {name} が設定されていません",
                 Exit.Config,
-                $"プロジェクト「{project}」用の API アクセスキー (Redmine の「個人設定」→「APIアクセスキー」) を、この名前のユーザー環境変数として設定してください (PowerShell: setx {name} \"<キー>\" のあと新しいシェルを開く)。変数名は .redmine.json の env (無ければ project) から決まり、汎用の REDMINE_API_KEY は読みません。");
+                url is null
+                    ? $"プロジェクト「{project}」用の API アクセスキー (Redmine の「個人設定」→「APIアクセスキー」) を、この名前のユーザー環境変数として設定してください ({manual})。変数名は .redmine.json の env (無ければ project) から決まり、汎用の REDMINE_API_KEY は読みません。"
+                    : $"このリポジトリで `redmine setup` を端末から実行すると、プロジェクト「{project}」用の API アクセスキーを対話で設定できます (キーは {url}/my/account の「APIアクセスキー」)。手で設定するなら {manual}。変数名は .redmine.json の env (無ければ project) から決まり、汎用の REDMINE_API_KEY は読みません。");
         }
         return key.Trim();
     }

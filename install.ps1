@@ -175,7 +175,7 @@ function Invoke-RedmineInstaller {
             Write-Warning "PATH では別の redmine が先に見つかります: $($found.Source)。Node 版 (npm link) なら、その clone で npm unlink -g redmine-cli を実行して外してください。"
         }
     }
-    Write-Host '次は対象のリポジトリで redmine target / redmine doctor を実行してください (使い方: redmine --help)。'
+    Write-Host '次は新しいシェルを開き、対象のリポジトリで redmine setup を実行してください (.redmine.json がまだ無いなら redmine init。使い方: redmine --help)。'
 }
 
 Invoke-RedmineInstaller -Version $Version -InstallDir $InstallDir -Uninstall $Uninstall.IsPresent -NoPathUpdate $NoPathUpdate.IsPresent -ArchivePath $ArchivePath

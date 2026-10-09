@@ -19,6 +19,7 @@
 - `.redmine.json` を編集・作成・削除しない (書き込み先を変える行為)。必要ならユーザーに依頼する。
 - 環境変数 `REDMINE_API_KEY_*`、`REDMINE_CLIENT_CERT_*`、`REDMINE_CLIENT_KEY_*`、`REDMINE_CLIENT_CERT_PASSWORD_*` を表示・設定・変更しない。証明書ファイルの中身も読まない。
   これらは CLI のプロセスが自分で読む。AI が値を知る必要はない。
+- `redmine setup` を実行しない。人が端末で API キーや証明書を入れるためのコマンドで、非対話の実行は終了コード 4 で断られる。
 - `api` コマンドの `--unsafe` を、`issues` / `time` サブコマンドで代替できる操作に使わない。`api` は宛先プロジェクトを検証できません。
 - `--yes` を付ける前に、`--dry-run` の出力または `issues show` で対象が正しいことを確認する。
 - 説明やコメントの長文は `--description-file` / `--note-file` (`-` で stdin) で渡す。シェルのクォート事故を避けるため。
@@ -31,12 +32,14 @@ redmine me --json          # 接続確認。user と target.project (id, name, i
 ```
 
 `target` が終了コード 3 なら `.redmine.json` が無いので、ユーザーに `redmine init` を依頼してください。
+`api_key_set` が `false` なら、ユーザーにこのリポジトリで `redmine setup` を端末から実行してもらってください (API キーと、必要なら証明書を対話で設定する)。
 
 ## 4. コマンド早見表
 
 | 目的 | コマンド | 種別 |
 | --- | --- | --- |
 | 向き先の確認 | `redmine target` | 読み取り (ローカル) |
+| API キーと証明書の設定 | `redmine setup` | 人が端末で実行する (AI は使わない) |
 | 接続できないときの診断 | `redmine doctor [--offline]` | 読み取り |
 | 接続確認 | `redmine me` | 読み取り |
 | プロジェクト一覧 | `redmine projects [--search <text>]` | 読み取り |
@@ -114,7 +117,7 @@ redmine issues update 123 --status "進行中" --done 30 --note "着手しまし
 | 0 | 成功 | |
 | 1 | 接続失敗、ファイル IO、上書き拒否 | stderr のヒント (プロキシ、証明書、`--force`) を読む。接続系はユーザーに報告 |
 | 2 | 引数誤り、名前解決失敗、変更なし | stderr の候補一覧を見て指定を直す |
-| 3 | `.redmine.json` が無い・不正、`REDMINE_API_KEY_<識別子>` 未設定、識別子が不在 | ユーザーに設定を依頼する。AI は直さない |
+| 3 | `.redmine.json` が無い・不正、`REDMINE_API_KEY_<識別子>` 未設定、識別子が不在 | ユーザーに設定を依頼する (キーや証明書なら `redmine setup`)。AI は直さない |
 | 4 | 安全装置で拒否 (対象外プロジェクト、`--yes` なし、`--unsafe` なし、対話で中止) | 対象を確認し直す。対象外なら別リポジトリでの作業をユーザーに提案 |
 | 5 | サーバーエラー (401 認証、403 権限、404 不在、422 入力拒否、413 サイズ超過) | 422 は stderr の `- ...` 行に理由が出る。401/403 はユーザーに報告 |
 

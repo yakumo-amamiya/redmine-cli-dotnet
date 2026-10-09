@@ -74,6 +74,10 @@ internal static class TargetCommand
             {
                 Out($"証明書       : 未設定 (mTLS が必要なら環境変数 {certEnv.Cert})");
             }
+            if (!apiKeySet || (certPath is not null && !certExists))
+            {
+                Info("→ 未設定の変数は、このリポジトリで `redmine setup` を端末から実行すると対話で設定できます。");
+            }
             return Exit.Ok;
         });
         return command;

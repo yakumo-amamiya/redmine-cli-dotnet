@@ -39,7 +39,7 @@ internal sealed class Context : IDisposable
     public static Context Create(Globals globals, CancellationToken cancellation)
     {
         var config = ConfigFile.Load();
-        var apiKey = EnvNames.GetApiKey(config.Project, config.Env);
+        var apiKey = EnvNames.GetApiKey(config.Project, config.Env, url: config.Url);
         var certEnv = EnvNames.ClientCert(config);
         var extraRoots = ExtraRoots.Load();
         var certificate = ClientCertificates.Load(certEnv);
