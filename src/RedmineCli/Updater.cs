@@ -48,8 +48,8 @@ internal sealed partial class Updater : IDisposable
             AllowAutoRedirect = redirect,
             AutomaticDecompression = DecompressionMethods.All,
             ConnectTimeout = TimeSpan.FromSeconds(30),
-            DefaultProxyCredentials = CredentialCache.DefaultCredentials,
         };
+        EnvProxy.Configure(handler);
         handler.SslOptions.RemoteCertificateValidationCallback = (_, certificate, chain, errors) => ExtraRoots.Accept(extraRoots, certificate, chain, errors);
         return handler;
     }

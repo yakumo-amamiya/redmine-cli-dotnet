@@ -95,8 +95,8 @@ internal static class Cli
           REDMINE_CLIENT_CERT_<識別子>           クライアント証明書のパス (mTLS が必要な環境のみ)。.pfx/.p12 か PEM
           REDMINE_CLIENT_KEY_<識別子>            PEM の秘密鍵のパス (証明書ファイルに鍵が含まれていれば不要)
           REDMINE_CLIENT_CERT_PASSWORD_<識別子>  PFX や暗号化鍵のパスワード (任意)
-          HTTPS_PROXY, NO_PROXY    社内プロキシ (例: http://user:pass@proxy.example.co.jp:8080)。
-                                   設定しなければ Windows のプロキシ設定を使う
+          HTTPS_PROXY, NO_PROXY    社内プロキシ (例: http://user:pass@proxy.example.co.jp:8080)。HTTPS_PROXY が無ければ HTTP_PROXY。
+                                   どれも設定しなければ Windows のプロキシ設定を使う。どれを通るかは redmine doctor の「経路」
           REDMINE_EXTRA_CA_CERTS   プロキシが TLS を復号する環境で、社内ルート CA の PEM ファイル。
                                    Windows の証明書ストアに入っていれば不要 (Node 版の NODE_EXTRA_CA_CERTS も読む)
 

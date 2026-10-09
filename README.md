@@ -103,13 +103,20 @@ setx REDMINE_API_KEY_MY_PROJECT "<キー>"
 
 ### 2. 社内プロキシと社内 CA (必要な場合)
 
-環境変数 `HTTPS_PROXY` / `NO_PROXY` があればそれを使い、無ければ Windows のプロキシ設定 (ブラウザと同じもの) を使う。
+プロキシは Node 版と同じ環境変数と同じ規則で決まる。Node 版で設定した `HTTPS_PROXY` / `NO_PROXY` はそのまま効く。
 
 ```powershell
 setx HTTPS_PROXY "http://proxy.example.co.jp:8080"        # 認証付きなら http://user:pass@proxy.example.co.jp:8080
 setx NO_PROXY "localhost,127.0.0.1,.example.co.jp"        # プロキシを通さない宛先
 ```
 
+- https の Redmine は `HTTPS_PROXY` を通る。`HTTPS_PROXY` が無ければ `HTTP_PROXY` を通る。http の Redmine は `HTTP_PROXY`。小文字の `https_proxy` なども同じ (Windows では同じ変数)
+- `NO_PROXY` に書いた宛先へは直接つなぐ。カンマか空白で区切る。`*` は全部、`redmine.example.co.jp` はそのホストだけ、
+  `.example.co.jp` か `*.example.co.jp` はその下の全部、`redmine.example.co.jp:8443` はそのポートだけ
+- プロキシの URL の `user:pass@` はプロキシの Basic 認証に使う。記号は `%40` (`@`) のように URL エンコードする。値は表示しない
+- プロキシの環境変数が 1 つも無いときは、Windows のプロキシ設定 (ブラウザと同じもの) を使う (Node 版は直接つないでいた)
+
+どれを通っているかは `redmine doctor` の「経路」の行か、`--verbose` の最初の行に出る。
 Windows の統合認証 (NTLM / Kerberos) を求めるプロキシには、サインイン中のユーザーの資格情報で応答する (実際の社内プロキシではまだ確かめていない)。
 
 サーバーの証明書は Windows の証明書ストアで検証する。プロキシが TLS を復号 (証明書を差し替え) している環境でも、社内ルート CA が
@@ -284,7 +291,7 @@ CLI 側でできるのはここまでで、`.redmine.json` と環境変数の両
 | 更新 | `git pull` | `redmine update` (Release から落として照合し、exe を置き換える) |
 | 自分のキーと証明書の設定 | `setx` を手で | `redmine setup` で対話 (キーとパスワードは画面に出さず、証明書はその場で開けるか確かめる) |
 | 社内 CA | `NODE_EXTRA_CA_CERTS` | Windows の証明書ストア。ストアに無い CA は `REDMINE_EXTRA_CA_CERTS` (`NODE_EXTRA_CA_CERTS` も読む) |
-| プロキシ | 環境変数だけ。NTLM / Kerberos は px や cntlm が必要 | 環境変数、無ければ Windows の設定。NTLM / Kerberos はサインイン中のユーザーで応答 |
+| プロキシ | 環境変数 (`HTTPS_PROXY`、無ければ `HTTP_PROXY`、`NO_PROXY`) だけ。NTLM / Kerberos は px や cntlm が必要 | 環境変数は同じ規則。どれも無ければ Windows の設定を使う。NTLM / Kerberos はサインイン中のユーザーで応答 |
 | リダイレクト | 飛ばされた先にも API キーのヘッダーが付く | 別のホストに飛ばされたらキーを送らない |
 | doctor | | 「経路」(直接かどのプロキシか) の行がある。証明書の内容は PFX でも出す |
 | 引数 | `--limit abc` などは既定値として扱う | 数でない値は引数誤り (終了コード 2) |
@@ -311,6 +318,7 @@ src/RedmineCli/
   RedmineClient.cs      HTTP。プロキシ、リダイレクト、エラーの日本語化、アップロード、ダウンロード
   Tls.cs                クライアント証明書 (PFX / PEM) の読み込み、REDMINE_EXTRA_CA_CERTS
   Updater.cs            redmine update (最新版の確認、ダウンロードと照合、exe の入れ替え)
+  Proxy.cs              プロキシの選び方 (HTTPS_PROXY / HTTP_PROXY / NO_PROXY を Node 版と同じ規則で。無ければ Windows の設定)
   Context.cs            安全装置。対象プロジェクトの解決、所属検証、送信前確認
   Lookups.cs            名前 → id の解決 (トラッカー、ステータス、担当者、カスタムフィールドなど)
   Output.cs, Json.cs    テーブル整形、JSON の出力、stdout / stderr の使い分け

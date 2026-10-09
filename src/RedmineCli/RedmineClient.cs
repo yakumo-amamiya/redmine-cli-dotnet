@@ -43,8 +43,8 @@ internal sealed class Query : List<KeyValuePair<string, string?>>
 /// The Redmine REST API client.
 /// - The key goes in the X-Redmine-API-Key header, and only to Redmine's own origin (redirects are followed here so that a
 ///   sign-in page on another host never sees it). The key is never logged.
-/// - The proxy comes from HTTPS_PROXY / HTTP_PROXY / NO_PROXY, else from Windows' proxy settings (.NET's default proxy).
-///   A proxy that asks for Windows sign-in (NTLM / Kerberos) gets the signed-in user's credentials.
+/// - The proxy comes from HTTPS_PROXY / HTTP_PROXY / NO_PROXY as the Node version read them, else from Windows' proxy
+///   settings (<see cref="EnvProxy"/>).
 /// - Server certificates are checked against Windows' store, plus the roots of REDMINE_EXTRA_CA_CERTS.
 /// - The client certificate (mTLS) is offered on a direct connection and through a proxy's CONNECT tunnel alike.
 /// </summary>
@@ -98,8 +98,12 @@ internal sealed partial class RedmineClient : IDisposable
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.All,
             ConnectTimeout = TimeSpan.FromSeconds(30),
-            DefaultProxyCredentials = CredentialCache.DefaultCredentials,
         };
+        EnvProxy.Configure(handler);
+        if (verbose)
+        {
+            Log($"経路: {EnvProxy.DescribeRoute(_base)}");
+        }
         handler.SslOptions.RemoteCertificateValidationCallback = ValidateServerCertificate;
         if (clientCertificate is not null)
         {
@@ -572,19 +576,4 @@ internal sealed partial class RedmineClient : IDisposable
         return new HttpStatusException(message, status, method, url.AbsoluteUri, details, hint);
     }
 
-    /// <summary>How a request to url leaves this PC: directly, or through which proxy (for doctor).</summary>
-    public static string DescribeRoute(Uri url)
-    {
-        var proxy = HttpClient.DefaultProxy;
-        var via = proxy.IsBypassed(url) ? null : proxy.GetProxy(url);
-        if (via is null || via == url)
-        {
-            return "直接接続";
-        }
-        string[] variables = ["HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY"];
-        var source = variables.Any(v => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(v)))
-            ? "環境変数"
-            : "Windows のプロキシ設定";
-        return $"プロキシ {via.Scheme}://{via.Host}:{via.Port} 経由 ({source})";
-    }
 }

@@ -106,7 +106,17 @@ internal static class DoctorCommand
                 steps.Add(new Step("API キー", Ng, e.Message, e.Hint));
             }
             certificate = CheckCertificate(config, steps, getEnv);
-            steps.Add(new Step("経路", Ok, RedmineClient.DescribeRoute(new Uri(config.Url + "/")), null));
+            try
+            {
+                steps.Add(new Step("経路", Ok, EnvProxy.DescribeRoute(new Uri(config.Url + "/"), getEnv), null));
+            }
+            catch (CliException e)
+            {
+                steps.Add(new Step("経路", Ng, e.Message, e.Hint));
+                certificate.Ok = false;
+                certificate.Value?.Dispose();
+                certificate.Value = null;
+            }
         }
         try
         {

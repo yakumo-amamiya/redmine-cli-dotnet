@@ -183,7 +183,7 @@ redmine api GET /issues/123.json?include=watchers
 | `REDMINE_CLIENT_CERT_<接尾辞>` | クライアント証明書のパス (mTLS が必要な環境のみ)。`.pfx` / `.p12` か PEM |
 | `REDMINE_CLIENT_KEY_<接尾辞>` | PEM の秘密鍵のパス。証明書ファイルに鍵が含まれていれば不要 |
 | `REDMINE_CLIENT_CERT_PASSWORD_<接尾辞>` | PFX や暗号化鍵のパスワード (任意) |
-| `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` | 社内プロキシ。`http://user:pass@proxy.example.co.jp:8080` の形式。設定しなければ Windows のプロキシ設定を使う |
+| `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` | 社内プロキシ。`http://user:pass@proxy.example.co.jp:8080` の形式。https の宛先は `HTTPS_PROXY` (無ければ `HTTP_PROXY`)。どれも設定しなければ Windows のプロキシ設定を使う |
 | `REDMINE_EXTRA_CA_CERTS` | プロキシが TLS を復号する環境で、社内ルート CA の PEM ファイル。Windows の証明書ストアに入っていれば不要 |
 
 接続に失敗したら `redmine me --verbose` の stderr をユーザーに見せてください。

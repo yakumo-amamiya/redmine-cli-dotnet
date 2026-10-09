@@ -183,7 +183,7 @@ public sealed class TlsTests(TlsFixture fixture) : IClassFixture<TlsFixture>
         Assert.Contains("redmine-cli test client", Step("証明書の内容", "detail"));
         Assert.Equal("OK", Step("接続と認証", "status"));
         Assert.Equal("OK", Step("対象プロジェクト", "status"));
-        Assert.Equal("直接接続", Step("経路", "detail"));
+        Assert.StartsWith("直接接続", Step("経路", "detail"));
     }
 
     [Fact]
